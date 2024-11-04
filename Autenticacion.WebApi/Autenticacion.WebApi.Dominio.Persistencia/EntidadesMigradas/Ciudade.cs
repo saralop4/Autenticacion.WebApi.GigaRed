@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Autenticacion.WebApi.Dominio.Persistencia.EntidadesMigradas;
+﻿namespace Autenticacion.WebApi.Dominio.Persistencia.EntidadesMigradas;
 
 public partial class Ciudade
 {
