@@ -1,6 +1,6 @@
-﻿using Autenticacion.WebApi.Dominio.Interfaces;
+﻿using Autenticacion.WebApi.Dominio.DTOs;
+using Autenticacion.WebApi.Dominio.Interfaces;
 using Autenticacion.WebApi.Dominio.Persistencia;
-using Autenticacion.WebApi.Dominio.Persistencia.Modelos;
 using Dapper;
 using Microsoft.Extensions.Configuration;
 using System.Data;
@@ -15,15 +15,15 @@ public class MenuRepositorio : IMenuRepositorio
         _context = new DapperContext(configuration);
     }
 
-    public async Task<IEnumerable<Menu>> ObtenerMenusPorRol(long IdRol)
+    public async Task<List<MenuDto>> ObtenerMenusPorRol(long IdRol)
     {
         using (var conexion = _context.CreateConnection())
         {
             var query = "ObtenerMenus";
             var parameters = new DynamicParameters();
             parameters.Add("IdRol", IdRol);
-            var menus = await conexion.QueryAsync<Menu>(query, param: parameters, commandType: CommandType.StoredProcedure);
-            return menus;
+            var menus = await conexion.QueryAsync<MenuDto>(query, param: parameters, commandType: CommandType.StoredProcedure);
+            return menus.ToList();
         }
     }
 }

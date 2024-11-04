@@ -1,3 +1,4 @@
+using Autenticacion.WebApi.Modules.Authentication;
 using Autenticacion.WebApi.Modules.Feature;
 using Autenticacion.WebApi.Modules.Injection;
 using Autenticacion.WebApi.Modules.Mapper;
@@ -19,9 +20,10 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
 
         builder.Services.AddVersioning();
-       // builder.Services.AddAuthentication(builder.Configuration);
+        builder.Services.AddAuthentication(builder.Configuration); //necesario para generar token
         builder.Services.AddValidator();
         builder.Services.AddMapper();
+        builder.Services.AddFeature(builder.Configuration);
         builder.Services.AddInjection(builder.Configuration);
         builder.Services.AddSwaggerDocumentation();
         builder.Services.AddWatchDog(builder.Configuration);

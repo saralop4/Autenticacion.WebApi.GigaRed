@@ -1,8 +1,8 @@
-﻿using Autenticacion.WebApi.Dominio.Persistencia.Modelos;
+﻿using Autenticacion.WebApi.Dominio.DTOs;
 
 namespace Autenticacion.WebApi.Dominio.Interfaces;
     public interface IMenuRepositorio
     {
-        public Task<IEnumerable<Menu>> ObtenerMenusPorRol(long IdRol);
+        public Task<List<MenuDto>> ObtenerMenusPorRol(long IdRol);
     }
 
