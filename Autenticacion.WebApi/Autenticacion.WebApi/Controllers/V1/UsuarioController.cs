@@ -33,7 +33,11 @@ public class UsuarioController : ControllerBase
     [HttpPost("GuardarUsuario")]
     public async Task<IActionResult> GuardarUsuario([FromBody] UsuarioDto usuarioDto)
     {
-        // Obtener la IP
+        if (usuarioDto == null)
+        {
+            return BadRequest(new { Mensaje = "El objeto usuarioDto es requerido." });
+        }
+
         var ipDeRegistro = HttpContext.Connection.RemoteIpAddress?.ToString();
 
         if (ipDeRegistro != null)
@@ -41,7 +45,7 @@ public class UsuarioController : ControllerBase
             usuarioDto.IpDeRegistro = ipDeRegistro;
         }
 
-        Console.WriteLine(JsonConvert.SerializeObject(usuarioDto)); // Esto para verificar que la IP se asigna correctamente
+        //Console.WriteLine(JsonConvert.SerializeObject(usuarioDto));
 
         var response = await _IUsuarioServicio.Guardar(usuarioDto);
 

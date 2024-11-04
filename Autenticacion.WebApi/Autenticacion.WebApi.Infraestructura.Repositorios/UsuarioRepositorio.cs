@@ -64,7 +64,7 @@ public class UsuarioRepositorio : IUsuarioRepositorio
     }
 
 
-    public async Task<Usuario> ObtenerPorCorreo(string correo)
+    public async Task<UsuarioExistente> ObtenerPorCorreo(string correo)
     {
         using (var conexion = _context.CreateConnection())
         {
@@ -72,7 +72,9 @@ public class UsuarioRepositorio : IUsuarioRepositorio
             var query = "ObtenerUsuarioPorCorreo";
             var parameters = new DynamicParameters();
             parameters.Add("Correo", correo);
-            var usuario = await conexion.QuerySingleOrDefaultAsync<Usuario>(query, param: parameters, commandType: CommandType.StoredProcedure);
+            var usuario = await conexion.QuerySingleOrDefaultAsync<UsuarioExistente>(query, param: parameters, commandType: CommandType.StoredProcedure);
+
+            Console.WriteLine("JEJE"+JsonConvert.SerializeObject(usuario));
 
             return usuario;
         }

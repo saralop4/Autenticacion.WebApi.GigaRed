@@ -124,6 +124,7 @@ public class UsuarioServicio : IUsuarioServicio
     public async Task<Response<bool>> Guardar(UsuarioDto modelo)
     {
         var response = new Response<bool>();
+
         try
         {
             // Validar el modelo
@@ -140,7 +141,12 @@ public class UsuarioServicio : IUsuarioServicio
             // Verificar si ya existe un usuario con el correo proporcionado
             if (!string.IsNullOrEmpty(modelo.Correo))
             {
+                Console.WriteLine(JsonConvert.SerializeObject(modelo.Correo));
+
                 var usuarioExistente = await _UsuarioRepositorio.ObtenerPorCorreo(modelo.Correo);
+
+                Console.WriteLine("valor"+JsonConvert.SerializeObject(usuarioExistente));
+
                 if (usuarioExistente != null)
                 {
                     response.IsSuccess = false;
@@ -156,7 +162,7 @@ public class UsuarioServicio : IUsuarioServicio
             // Intentar guardar el usuario
             response.Data = await _UsuarioRepositorio.Guardar(usuario);
 
-            Console.WriteLine(JsonConvert.SerializeObject(response.Data));
+
 
             if (response.Data)
             {
