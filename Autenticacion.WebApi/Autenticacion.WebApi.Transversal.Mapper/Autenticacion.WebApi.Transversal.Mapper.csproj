@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="13.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Autenticacion.WebApi.Dominio.DTOs\Autenticacion.WebApi.Dominio.DTOs.csproj" />
+    <ProjectReference Include="..\Autenticacion.WebApi.Dominio.Persistencia\Autenticacion.WebApi.Dominio.Persistencia.csproj" />
+  </ItemGroup>
+
+</Project>
