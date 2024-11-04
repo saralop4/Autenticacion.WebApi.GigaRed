@@ -5,7 +5,7 @@ using Autenticacion.WebApi.Dominio.Persistencia.Modelos;
 namespace Autenticacion.WebApi.Dominio.Interfaces;
 public interface IUsuarioRepositorio : IGenericRepository<Usuario>
 {
-    Task<Usuario> ObtenerPorCorreo(string correo);
+    Task<UsuarioExistente> ObtenerPorCorreo(string correo);
     Task<UsuarioExistente> ValidarUsuario(UsuarioLoginDto modelo);
 
 
