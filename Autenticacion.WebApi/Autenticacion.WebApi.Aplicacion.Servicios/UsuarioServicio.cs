@@ -47,10 +47,11 @@ public class UsuarioServicio : IUsuarioServicio
         throw new NotImplementedException();
     }
 
-    public async Task<Response<TokenDto>> IniciarSesion(UsuarioLoginDto modelo)
-    {
+   public async Task<Response<TokenDto>> IniciarSesion(UsuarioLoginDto modelo)
+   {
         var response = new Response<TokenDto>();
         var validation = _UsuarioLoginDtoValidador.Validate(new UsuarioLoginDto() { Correo = modelo.Correo, Contraseña = modelo.Contraseña });
+
 
         if (!validation.IsValid)
         {
@@ -60,51 +61,51 @@ public class UsuarioServicio : IUsuarioServicio
         }
 
         try
-        {
-
-            var usuarioValidado = await _UsuarioRepositorio.ValidarUsuario(modelo);
-
-            if (usuarioValidado != null)
             {
-                var menus = await _MenuRepositorio.ObtenerMenusPorRol(usuarioValidado.IdRol);
+                var usuarioValidado = await _UsuarioRepositorio.ValidarUsuario(modelo);
 
-                if (!string.IsNullOrEmpty(usuarioValidado.NombreRol) && !string.IsNullOrEmpty(usuarioValidado.Correo))
+                if (usuarioValidado != null)
                 {
-                    string token = GenerateJwtToken(usuarioValidado.IdUsuario, usuarioValidado.NombreRol, usuarioValidado.Correo, menus);
-                    TokenDto tokenDto = new TokenDto { Token = token };
+                    var menus = await _MenuRepositorio.ObtenerMenusPorRol(usuarioValidado.IdRol);
 
-                    response.Data = tokenDto;
-                    response.IsSuccess = true;
-                    response.Message = "Autenticación exitosa";
-                    _logger.LogInformation("Autenticación exitosa!!");
+                    //  Console.WriteLine(JsonConvert.SerializeObject(menus));
+                    if (usuarioValidado.NombreRol != null && usuarioValidado.Correo != null)
+                    {
+
+                        string token = GenerateJwtToken(usuarioValidado.IdUsuario, usuarioValidado.NombreRol, usuarioValidado.Correo, menus);
+                        TokenDto TokenDto = new TokenDto { Token = token };
+
+                        response.Data = TokenDto;
+                        response.IsSuccess = true;
+                        response.Message = "Autenticacion exitosa";
+                        _logger.LogInformation("Autenticacion exitosa!!");
+                    }
+                    else
+                    {
+                        response.IsSuccess = false;
+                        response.Message = "El nombre del rol y el correo no pueden ser nulos ni vacio";
+                    }
                 }
                 else
                 {
                     response.IsSuccess = false;
-                    response.Message = "El nombre del rol y el correo no pueden ser nulos ni vacíos";
+                    response.Message = "Usuario o Contraseña Incorrectos";
                 }
-            }
-            else
-            {
-                response.IsSuccess = false;
-                response.Message = "Usuario o Contraseña Incorrectos";
-            }
-        }
-        catch (TokenGenerationException ex)
-        {
-            response.IsSuccess = false;
-            response.Message = $"Error al generar el token. {ex.Message}";
+
+        }catch (TokenGenerationException ex)
+        { 
+                    response.IsSuccess = false;
+                    response.Message = $"Error al generar el token. {ex.Message}" ;
         }
         catch (InvalidOperationException ex)
-        {
-            response.IsSuccess = false;
-            response.Message = $"Usuario no existe. {ex.Message}";
-        }
+         {
+                    response.IsSuccess = false;
+                    response.Message = $"Usuario no existe. {ex.Message}";
+         }
 
 
-        return response;
-    }
-
+                 return response;
+   }
     public Task<Response<bool>> Eliminar(long id)
     {
         throw new NotImplementedException();
@@ -151,7 +152,6 @@ public class UsuarioServicio : IUsuarioServicio
                 return response;
             }
 
-
             var usuario = _mapper.Map<Usuario>(modelo);
 
             var Usuario = await _UsuarioRepositorio.Guardar(usuario);
@@ -179,7 +179,7 @@ public class UsuarioServicio : IUsuarioServicio
     }
 
   
-    private string GenerateJwtToken(long idUsuario, string nombreRol, string correo, IEnumerable<Menu> menus)
+    private string GenerateJwtToken(long idUsuario, string nombreRol, string correo, List<MenuDto> menus)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
 
