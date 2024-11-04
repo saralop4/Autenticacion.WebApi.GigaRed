@@ -1,6 +1,7 @@
 ﻿using Autenticacion.WebApi.Aplicacion.Interfaces;
 using Autenticacion.WebApi.Dominio.DTOs.UsuarioDTOs;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 
 namespace Autenticacion.WebApi.Controllers.V1;
 
@@ -38,8 +39,9 @@ public class UsuarioController : ControllerBase
         if (ipDeRegistro != null)
         {
             usuarioDto.IpDeRegistro = ipDeRegistro;
-
         }
+
+        Console.WriteLine(JsonConvert.SerializeObject(usuarioDto)); // Esto para verificar que la IP se asigna correctamente
 
         var response = await _IUsuarioServicio.Guardar(usuarioDto);
 
@@ -50,5 +52,4 @@ public class UsuarioController : ControllerBase
 
         return BadRequest(response);
     }
-
 }

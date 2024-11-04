@@ -7,6 +7,7 @@ using Dapper;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using System.Data;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace Autenticacion.WebApi.Infraestructura.Repositorios;
 
@@ -37,12 +38,10 @@ public class UsuarioRepositorio : IUsuarioRepositorio
     public async Task<bool> Guardar(Usuario modelo)
     {
         var contraseñaEncriptada = BCrypt.Net.BCrypt.HashPassword(modelo.Contraseña);
-
         using (var conexion = _context.CreateConnection())
         {
             var query = "GuardarUsuarioYPersona";
             var parameters = new DynamicParameters();
-
             parameters.Add("IdIndicativo", modelo.IdPersonaNavigation.IdIndicativo);
             parameters.Add("IdCiudad", modelo.IdPersonaNavigation.IdCiudad);
             parameters.Add("PrimerNombre", modelo.IdPersonaNavigation.PrimerNombre);
@@ -50,7 +49,7 @@ public class UsuarioRepositorio : IUsuarioRepositorio
             parameters.Add("PrimerApellido", modelo.IdPersonaNavigation.PrimerApellido);
             parameters.Add("SegundoApellido", modelo.IdPersonaNavigation.SegundoApellido);
             parameters.Add("Telefono", modelo.IdPersonaNavigation.Telefono);
-            parameters.Add("Foto", modelo.IdPersonaNavigation.Foto);
+            parameters.Add("Foto", modelo.IdPersonaNavigation.Foto, DbType.Binary);
             parameters.Add("NombreFoto", modelo.IdPersonaNavigation.NombreFoto);
             parameters.Add("UsuarioQueRegistra", modelo.UsuarioQueRegistra);
             parameters.Add("IpDeRegistro", modelo.IpDeRegistro);
@@ -58,11 +57,12 @@ public class UsuarioRepositorio : IUsuarioRepositorio
             parameters.Add("Correo", modelo.Correo);
             parameters.Add("Contraseña", contraseñaEncriptada);
 
-            var usuarioRegistrado = await conexion.ExecuteAsync(query, param: parameters, commandType: CommandType.StoredProcedure);
-
-            return usuarioRegistrado > 0;
+            var result = await conexion.ExecuteAsync(query, param: parameters, commandType: CommandType.StoredProcedure);
+            //el metodo execute permite invocar un procedimiento almacenado y enviarle los parametros
+            return result > 0;
         }
     }
+
 
     public async Task<Usuario> ObtenerPorCorreo(string correo)
     {

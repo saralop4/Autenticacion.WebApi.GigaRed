@@ -7,71 +7,115 @@ using Autenticacion.WebApi.Modules.Validator;
 using Autenticacion.WebApi.Modules.Versioning;
 using Autenticacion.WebApi.Modules.WatchDog;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using WatchDog;
 
-namespace Autenticacion.WebApi;
-
-public class Program
+namespace Autenticacion.WebApi
 {
-    public static void Main(string[] args)
+    public class Program
     {
-        var builder = WebApplication.CreateBuilder(args);
-
-        builder.Services.AddEndpointsApiExplorer();
-
-        builder.Services.AddVersioning();
-        builder.Services.AddAuthentication(builder.Configuration); //necesario para generar token
-        builder.Services.AddValidator();
-        builder.Services.AddMapper();
-        builder.Services.AddFeature(builder.Configuration);
-        builder.Services.AddInjection(builder.Configuration);
-        builder.Services.AddSwaggerDocumentation();
-        builder.Services.AddWatchDog(builder.Configuration);
-
-        builder.Services.AddCors(option =>
+        public static void Main(string[] args)
         {
-            option.AddPolicy("policyApi", builder =>
+            var builder = WebApplication.CreateBuilder(args);
+
+            if (builder.Environment.IsDevelopment())
             {
-                builder.AllowAnyOrigin()
-                .AllowAnyMethod()
-                .AllowAnyHeader();
-            });
-        });
+                builder.Configuration.AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true);
+            }
+            else
+            {
+                builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+            }
 
+            builder.Services.AddEndpointsApiExplorer();
 
-        var app = builder.Build();
-
-        if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
-        {
-
-            app.UseDeveloperExceptionPage();
-            app.UseSwagger(); //habilitamos el middleware para servir al swagger generated como un endpoint json
-            app.UseSwaggerUI( // habilitamos el dashboard de swagger 
-                c =>
+            builder.Services.AddControllers()
+                .AddNewtonsoftJson(options =>
                 {
-                    //SwaggerEndpoint ese metodo recibe dos parametros, el primero es la url, el segundo es el nombre del endpoint
-                    //  c.SwaggerEndpoint("/swagger/v1/swagger.json", "Mi Api Empresarial v1");
+                    options.SerializerSettings.ContractResolver = new DefaultContractResolver
+                    {
+                        NamingStrategy = new DefaultNamingStrategy() // Asegura la utilización de Pascal Case
+                    };
+                });
 
+            builder.Services.AddVersioning();
+            builder.Services.AddAuthentication(builder.Configuration);
+            builder.Services.AddValidator();
+            builder.Services.AddMapper();
+            builder.Services.AddFeature(builder.Configuration);
+            builder.Services.AddInjection(builder.Configuration);
+            builder.Services.AddSwaggerDocumentation();
+            builder.Services.AddWatchDog(builder.Configuration);
+
+            var app = builder.Build();
+
+            if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
+            {
+                app.UseDeveloperExceptionPage();
+                app.UseSwagger();
+                app.UseSwaggerUI(c =>
+                {
                     var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
                     foreach (var description in provider.ApiVersionDescriptions)
                     {
                         c.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
                     }
                 });
+            }
+
+            app.Use(async (context, next) =>
+            {
+                try
+                {
+                    await next();
+                }
+                catch (DbUpdateException ex)
+                {
+                    context.Response.StatusCode = 400;
+                    var settings = new JsonSerializerSettings { ContractResolver = new DefaultContractResolver { NamingStrategy = new DefaultNamingStrategy() } };
+                    var result = JsonConvert.SerializeObject(new { Mensaje = ex.Message }, settings);
+                    await context.Response.WriteAsync(result);
+                }
+
+                catch (Exception ex)
+                {
+                    context.Response.StatusCode = 500;
+                    context.Response.ContentType = "application/json";
+
+                    var settings = new JsonSerializerSettings { ContractResolver = new DefaultContractResolver { NamingStrategy = new DefaultNamingStrategy() } };
+                    var result = JsonConvert.SerializeObject(new { Mensaje = $"Ah ocurrido un error inesperado en el servidor, por favor contactar al administrador del sistema. ({ex.Message})" }, settings);
+
+                    await context.Response.WriteAsync(result);
+                }
+
+                if (context.Response.StatusCode == 401)
+                {
+                    var settings = new JsonSerializerSettings { ContractResolver = new DefaultContractResolver { NamingStrategy = new DefaultNamingStrategy() } };
+                    var result = JsonConvert.SerializeObject(new { Mensaje = "No se ha autenticado para realizar este proceso." }, settings);
+                    context.Response.ContentType = "application/json";
+                    await context.Response.WriteAsync(result);
+                }
+                else if (context.Response.StatusCode == 403)
+                {
+                    var settings = new JsonSerializerSettings { ContractResolver = new DefaultContractResolver { NamingStrategy = new DefaultNamingStrategy() } };
+                    var result = JsonConvert.SerializeObject(new { Mensaje = "No tienes permiso para realizar esta acción." }, settings);
+                    context.Response.ContentType = "application/json";
+                    await context.Response.WriteAsync(result);
+                }
+            });
+
+            app.UseWatchDogExceptionLogger();
+            app.UseHttpsRedirection();
+            app.UseCors("policyApi");
+            app.MapControllers();
+            app.UseWatchDog(opt =>
+            {
+                opt.WatchPageUsername = builder.Configuration["WatchDog:WatchPageUsername"];
+                opt.WatchPagePassword = builder.Configuration["WatchDog:WatchPagePassword"];
+            });
+            app.Run();
         }
-
-        app.UseWatchDogExceptionLogger();
-        app.UseHttpsRedirection();
-        app.UseCors("policyApi");
-        app.MapControllers();
-        app.UseWatchDog(opt =>
-        {
-            opt.WatchPageUsername = builder.Configuration["WatchDog:WatchPageUsername"];
-            opt.WatchPagePassword = builder.Configuration["WatchDog:WatchPagePassword"];
-            //opt.WatchPageUsername = "admin";
-            //opt.WatchPagePassword = "admin@123";
-        });
-        app.Run();
-
     }
 }

@@ -4,7 +4,6 @@ using Autenticacion.WebApi.Dominio.DTOs;
 using Autenticacion.WebApi.Dominio.DTOs.UsuarioDTOs;
 using Autenticacion.WebApi.Dominio.Interfaces;
 using Autenticacion.WebApi.Dominio.Persistencia.EntidadesMigradas;
-using Autenticacion.WebApi.Dominio.Persistencia.Modelos;
 using Autenticacion.WebApi.Transversal.Excepciones;
 using Autenticacion.WebApi.Transversal.Interfaces;
 using Autenticacion.WebApi.Transversal.Modelos;
@@ -47,7 +46,7 @@ public class UsuarioServicio : IUsuarioServicio
         throw new NotImplementedException();
     }
 
-   public async Task<Response<TokenDto>> IniciarSesion(UsuarioLoginDto modelo)
+    public async Task<Response<TokenDto>> IniciarSesion(UsuarioLoginDto modelo)
    {
         var response = new Response<TokenDto>();
         var validation = _UsuarioLoginDtoValidador.Validate(new UsuarioLoginDto() { Correo = modelo.Correo, Contraseña = modelo.Contraseña });
@@ -57,6 +56,7 @@ public class UsuarioServicio : IUsuarioServicio
         {
             response.Message = "Errores de validación encontrados";
             response.Errors = validation.Errors;
+            _logger.LogWarning("Se Encontraron errores de validación en modelo");
             return response;
         }
 
@@ -84,28 +84,38 @@ public class UsuarioServicio : IUsuarioServicio
                     {
                         response.IsSuccess = false;
                         response.Message = "El nombre del rol y el correo no pueden ser nulos ni vacio";
-                    }
+                       _logger.LogWarning("El Metodo de generar token recibio parametros vacio y eso lanza este error");
+                }
                 }
                 else
                 {
                     response.IsSuccess = false;
                     response.Message = "Usuario o Contraseña Incorrectos";
-                }
+                    _logger.LogWarning("El usuario o la contraseña son incorrectos");
+            }
 
         }catch (TokenGenerationException ex)
         { 
-                    response.IsSuccess = false;
-                    response.Message = $"Error al generar el token. {ex.Message}" ;
+            response.IsSuccess = false;
+            response.Message = $"Error al generar el token. {ex.Message}" ;
+            _logger.LogError($"Ocurrio un error al intentar generar el token => {ex.Message} ***");
         }
         catch (InvalidOperationException ex)
-         {
-                    response.IsSuccess = false;
-                    response.Message = $"Usuario no existe. {ex.Message}";
-         }
+        {
+             response.IsSuccess = false;
+             response.Message = $"Usuario no existe. {ex.Message}";
+             _logger.LogError($"El usuario que intenta iniciar sesion no existe => {ex.Message} ***");
+        }
+        catch (Exception ex)
+        {
+            response.IsSuccess = false;
+            response.Message = $"Ocurrió un error: {ex.Message}";
+            _logger.LogError($"Ocurrio un error de servidor y se lanza una excepcion => {ex.Message} ***");
+        }
 
-
-                 return response;
+        return response;
    }
+
     public Task<Response<bool>> Eliminar(long id)
     {
         throw new NotImplementedException();
@@ -114,71 +124,65 @@ public class UsuarioServicio : IUsuarioServicio
     public async Task<Response<bool>> Guardar(UsuarioDto modelo)
     {
         var response = new Response<bool>();
-
         try
         {
-            var validation = _UsuarioDtoValidador.Validate(new UsuarioDto()
-            {
-
-                IdIndicativo = modelo.IdIndicativo,
-                IdCiudad = modelo.IdCiudad,
-                PrimerNombre = modelo.PrimerNombre,
-                SegundoNombre = modelo.SegundoNombre,
-                PrimerApellido = modelo.PrimerApellido,
-                SegundoApellido = modelo.SegundoApellido,
-                Telefono = modelo.Telefono,
-                UsuarioQueRegistra = modelo.UsuarioQueRegistra,
-                Correo = modelo.Correo,
-                Contraseña = modelo.Contraseña,
-                IpDeRegistro = modelo.IpDeRegistro
-            });
-
+            // Validar el modelo
+            var validation = _UsuarioDtoValidador.Validate(modelo);
             if (!validation.IsValid)
             {
                 response.IsSuccess = false;
                 response.Message = "Errores de validación";
                 response.Errors = validation.Errors;
+                _logger.LogWarning("Errores de validación en el modelo de usuario");
                 return response;
             }
 
-
-
-            var usuarioExistente = await _UsuarioRepositorio.ObtenerPorCorreo(modelo.Correo);
-
-            if (usuarioExistente is not null)
+            // Verificar si ya existe un usuario con el correo proporcionado
+            if (!string.IsNullOrEmpty(modelo.Correo))
             {
-                response.IsSuccess = false;
-                response.Message = "El usuario ya existe";
-                return response;
+                var usuarioExistente = await _UsuarioRepositorio.ObtenerPorCorreo(modelo.Correo);
+                if (usuarioExistente != null)
+                {
+                    response.IsSuccess = false;
+                    response.Message = "El usuario ya existe";
+                    _logger.LogWarning("El usuario ya existe en la base de datos");
+                    return response;
+                }
             }
 
+            // Mapear el modelo DTO a la entidad de usuario
             var usuario = _mapper.Map<Usuario>(modelo);
 
-            var Usuario = await _UsuarioRepositorio.Guardar(usuario);
+            // Intentar guardar el usuario
+            response.Data = await _UsuarioRepositorio.Guardar(usuario);
 
-            if (Usuario is {})
+            Console.WriteLine(JsonConvert.SerializeObject(response.Data));
+
+            if (response.Data)
             {
                 response.IsSuccess = true;
                 response.Message = "Registro exitoso!";
-                _logger.LogInformation("Registro exitosa!!");
+                _logger.LogInformation("Usuario registrado exitosamente");
             }
             else
             {
                 response.IsSuccess = false;
                 response.Message = "Hubo un error al crear el registro";
+                _logger.LogWarning("Error al guardar el usuario en el repositorio");
             }
         }
         catch (Exception ex)
         {
             response.IsSuccess = false;
-            response.Message = $"Ocurrió un error: {ex.Message}";
-            _logger.LogError(ex.Message);
+            response.Message = $"Ocurrió un error de servidor: {ex.Message}";
+            _logger.LogError($"Ocurrió un error en el servidor: {ex.Message}");
         }
 
         return response;
     }
 
-  
+
+
     private string GenerateJwtToken(long idUsuario, string nombreRol, string correo, List<MenuDto> menus)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
